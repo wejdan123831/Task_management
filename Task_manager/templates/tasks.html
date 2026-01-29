@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks - TeamSync{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 animate__animated animate__fadeIn">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-end mb-5">
+        <div>
+            <h1 class="display-4 fw-bold mb-2">All Tasks</h1>
+            <p class="text-muted lead mb-0">Track progress and assign objectives</p>
+        </div>
+
+        <button class="btn btn-neon rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+            <i class="bi bi-plus-lg me-2"></i>New Task
+        </button>
+    </div>
+
+    <!-- Task Grid -->
+    <div class="row g-4">
+        {% for task in tasks %}
+        <div class="col-md-6 col-lg-4">
+            <div class="glass-panel p-4 h-100 d-flex flex-column position-relative">
+
+                <!-- Status Badge (Top Right) -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="badge rounded-pill px-3 py-2 text-uppercase ls-1 fw-bold
+                        {% if task.status == 'completed' %}bg-success bg-opacity-10 text-success
+                        {% elif task.status == 'in progress' %}bg-warning bg-opacity-10 text-warning
+                        {% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                        {{ task.status }}
+                    </span>
+
+                    <!-- Smart Status Logic (Hidden by default, shown via JS if owner) -->
+                    {% if task.owner %}
+                    <div class="dropdown d-none" data-owner-id="{{ task.owner.id }}">
+                        <button class="btn btn-sm btn-action-grey rounded-pill dropdown-toggle" type="button"
+                            id="statusDropdown{{ task.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                            Update Status
+                        </button>
+                        <ul class="dropdown-menu shadow-lg border-0" aria-labelledby="statusDropdown{{ task.id }}">
+                            <li><button class="dropdown-item" onclick="updateStatus({{ task.id }}, 'todo')"><i
+                                        class="bi bi-circle me-2"></i>To Do</button></li>
+                            <li><button class="dropdown-item" onclick="updateStatus({{ task.id }}, 'in progress')"><i
+                                        class="bi bi-arrow-repeat me-2"></i>In Progress</button></li>
+                            <li><button class="dropdown-item" onclick="updateStatus({{ task.id }}, 'completed')"><i
+                                        class="bi bi-check-circle me-2"></i>Completed</button></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <h4 class="fw-bold fs-5 text-dark mb-2">{{ task.title }}</h4>
+                <p class="text-muted flex-grow-1 mb-4">{{ task.description }}</p>
+
+                <!-- Footer: Assignee -->
+                <div class="d-flex align-items-center border-top border-secondary pt-3 mt-auto">
+                    {% if task.owner %}
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white me-2"
+                            style="width: 32px; height: 32px; font-size: 0.8rem;">
+                            {{ task.owner.username[0]|upper }}
+                        </div>
+                        <small class="text-muted">{{ task.owner.username }}</small>
+                    </div>
+                    {% else %}
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white me-2"
+                            style="width: 32px; height: 32px; font-size: 0.8rem;">
+                            ?
+                        </div>
+                        <small class="text-muted">Unassigned</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold">New Task</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="createTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label text-uppercase small text-muted fw-bold">Title</label>
+                        <input type="text" class="form-control" id="taskTitle" required placeholder="Project Alpha">
+                        <div class="form-text text-white-50">Must start with a capital letter.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-uppercase small text-muted fw-bold">Description</label>
+                        <textarea class="form-control" id="taskDesc" rows="3" required
+                            placeholder="Launch the rocket..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-uppercase small text-muted fw-bold">Assign To</label>
+                        <select class="form-select" id="taskOwner" required>
+                            {% for user in users %}
+                            <option value="{{ user.id }}" class="text-dark">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-outline-light rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-neon rounded-pill" onclick="submitTask()">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            const user = JSON.parse(userStr);
+            const dropdowns = document.querySelectorAll('.dropdown[data-owner-id]');
+
+            dropdowns.forEach(dd => {
+                // If owner ID matches logged in user ID, show the dropdown
+                if (parseInt(dd.dataset.ownerId) === user.id) {
+                    dd.classList.remove('d-none');
+                }
+            });
+        }
+    });
+
+    async function updateStatus(taskId, newStatus) {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+            showToast('You must be logged in to update tasks.', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch(`/tasks/${taskId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (res.ok) {
+                showToast('Status updated successfully!', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                const err = await res.json();
+                showToast(err.detail || 'Update failed', 'error');
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+        }
+    }
+
+    async function submitTask() {
+        const title = document.getElementById('taskTitle').value;
+        const desc = document.getElementById('taskDesc').value;
+        const ownerId = document.getElementById('taskOwner').value;
+
+        if (!title || !desc || !ownerId) {
+            showToast('Please fill all fields', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch('/tasks/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title,
+                    description: desc,
+                    status: 'todo',
+                    priority: 3,
+                    assign_user: parseInt(ownerId)
+                })
+            });
+
+            if (res.ok) {
+                showToast('Task created! Redirecting...', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                const err = await res.json();
+                console.error(err);
+                const msg = err.detail && Array.isArray(err.detail) ? err.detail[0].msg : (err.detail || 'Failed');
+                showToast('Error: ' + msg, 'error');
+            }
+        } catch (e) {
+            showToast('Network error.', 'error');
+        }
+    }
+</script>
+{% endblock %}

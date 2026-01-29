@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Log in - TeamSync{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-center" style="min-height: 85vh;">
+    <!-- Glass Card -->
+    <div class="glass-panel p-5 animate__animated animate__zoomIn" style="width: 100%; max-width: 450px;">
+        <div class="text-center mb-5">
+            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                style="width: 60px; height: 60px; background: rgba(255,255,255,0.1); box-shadow: 0 0 20px var(--primary-glow);">
+                <i class="bi bi-person-fill fs-2 text-white"></i>
+            </div>
+            <h2 class="fw-bold text-white">Welcome Back</h2>
+            <p class="text-muted small">Enter your credentials to access the workspace</p>
+        </div>
+
+        <form id="standaloneLoginForm">
+            <div class="mb-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-0 text-muted ps-0"><i
+                            class="bi bi-envelope"></i></span>
+                    <input type="text" class="form-control bg-transparent text-white" id="pageLoginInput"
+                        placeholder="Username or Email" required
+                        style="border: none; border-bottom: 2px solid rgba(255,255,255,0.1); border-radius: 0;">
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-0 text-muted ps-0"><i
+                            class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control bg-transparent text-white" id="pageLoginPassword"
+                        required placeholder="Password"
+                        style="border: none; border-bottom: 2px solid rgba(255,255,255,0.1); border-radius: 0;">
+                    <span class="input-group-text bg-transparent border-0" style="cursor: pointer;"
+                        onclick="togglePasswordVisibility()">
+                        <i class="bi bi-eye text-muted" id="togglePasswordIcon"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="d-grid gap-3">
+                <button type="button" class="btn btn-neon rounded-pill py-3" onclick="performPageLogin()">
+                    Sign In <i class="bi bi-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </form>
+
+        <div class="text-center mt-5">
+            <p class="text-muted small mb-0">New here?</p>
+            <a href="#" class="text-white text-decoration-none fw-bold" data-bs-toggle="modal"
+                data-bs-target="#createUserModal">Create an account</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('pageLoginPassword');
+        const icon = document.getElementById('togglePasswordIcon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            icon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            icon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+
+    async function performPageLogin() {
+        const input = document.getElementById('pageLoginInput').value;
+        const password = document.getElementById('pageLoginPassword').value;
+        const btn = document.querySelector('button[onclick="performPageLogin()"]');
+
+        if (!input || !password) {
+            showToast('Please enter both credentials.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Authenticating...';
+
+        try {
+            const res = await fetch('/users/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: input, password: password })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('user', JSON.stringify({
+                    id: data.user_id,
+                    username: data.username,
+                    role: data.role
+                }));
+
+                showToast(`Welcome back, ${data.username}!`, 'success');
+                // Redirect to tasks page on success
+                setTimeout(() => window.location.href = '/tasks-page', 800);
+            } else {
+                const err = await res.json();
+                showToast(err.detail || 'Login failed', 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Sign In <i class="bi bi-arrow-right ms-2"></i>';
+            }
+        } catch (e) {
+            showToast('Network error. Please try again.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Sign In <i class="bi bi-arrow-right ms-2"></i>';
+        }
+    }
+</script>
+{% endblock %}

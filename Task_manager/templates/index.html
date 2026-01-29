@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - TeamSync{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 animate__animated animate__fadeIn">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-end mb-5">
+        <div>
+            <h1 class="display-4 fw-bold text-dark mb-2">Team Dashboard</h1>
+            <p class="text-muted lead mb-0">Manage your squad and oversee roles</p>
+        </div>
+        <div class="d-none d-md-block">
+            <span class="badge bg-light text-dark border border-secondary rounded-pill px-3 py-2 text-uppercase ls-1">
+                {{ users|length }} Active Members
+            </span>
+        </div>
+    </div>
+
+    <!-- Bento Grid -->
+    <style>
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .user-card {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+            background: #fff;
+            /* Ensure white bg */
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--primary-glow);
+            box-shadow: 0 10px 40px -10px rgba(13, 110, 253, 0.15);
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
+            z-index: 0;
+        }
+
+        .avatar-glow {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #0d6efd;
+            /* Blue initials */
+            position: relative;
+            z-index: 1;
+        }
+
+        .role-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            background: #fff;
+            border: 1px solid #dee2e6;
+        }
+    </style>
+
+    <div class="bento-grid">
+
+        {% for user in users %}
+        <div class="glass-panel user-card p-4">
+            <span class="badge rounded-pill text-uppercase role-badge 
+                {% if user.role == 'admin' %}text-danger border-danger
+                {% elif user.role == 'manager' %}text-warning border-warning
+                {% else %}text-info border-info{% endif %}">
+                {{ user.role }}
+            </span>
+
+            <div class="text-center mt-3 mb-4">
+                <div class="avatar-glow mx-auto mb-3">
+                    {{ user.username[0]|upper }}
+                </div>
+                <h4 class="fw-bold text-dark mb-1">{{ user.username }}</h4>
+                <p class="text-muted small mb-0">{{ user.email }}</p>
+            </div>
+
+            {% if user.profile %}
+            <div class="border-top border-light pt-3 mt-3">
+                <p class="small text-muted mb-3 fst-italic">"{{ user.profile.bio or 'Values privacy.' }}"</p>
+
+                {% if user.profile.website %}
+                <a href="{{ user.profile.website }}" target="_blank"
+                    class="btn btn-sm btn-outline-primary w-100 rounded-pill">
+                    <i class="bi bi-link-45deg me-1"></i> Portfolio
+                </a>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="text-center mt-4 opacity-25">
+                <i class="bi bi-three-dots"></i>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

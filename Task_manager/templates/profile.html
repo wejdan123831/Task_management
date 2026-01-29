@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - TeamSync{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 animate__animated animate__fadeIn">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-end mb-5">
+        <div>
+            <h1 class="display-4 fw-bold text-dark mb-2">My Profile</h1>
+            <p class="text-muted lead mb-0">Manage your identity and settings</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Profile Card -->
+            <div class="glass-panel p-5 position-relative">
+
+                <!-- Avatar & Header -->
+                <div class="text-center mb-5">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-gradient bg-primary text-white shadow-lg mb-4"
+                        style="width: 120px; height: 120px; font-size: 3rem;">
+                        <span id="profileInitials">U</span>
+                    </div>
+                    <h2 class="fw-bold text-dark mb-1" id="profileUsername">Loading...</h2>
+                    <span class="badge rounded-pill border border-secondary text-dark text-uppercase ls-1 px-3 py-2"
+                        id="profileRole">
+                        Role
+                    </span>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="row g-4 border-top border-secondary pt-4">
+                    <div class="col-md-6">
+                        <label class="text-muted small text-uppercase fw-bold mb-2">Email</label>
+                        <p class="text-dark lead mb-0" id="profileEmail">...</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small text-uppercase fw-bold mb-2">Website</label>
+                        <p class="mb-0">
+                            <a href="#" id="profileWebsite" target="_blank"
+                                class="text-primary text-decoration-none d-none">
+                                <i class="bi bi-link-45deg me-1"></i> Visit Website
+                            </a>
+                            <span id="noWebsite" class="text-muted fst-italic">No website added</span>
+                        </p>
+                    </div>
+                    <div class="col-12">
+                        <label class="text-muted small text-uppercase fw-bold mb-2">Bio</label>
+                        <div class="p-3 rounded bg-light border border-secondary border-opacity-10">
+                            <p class="text-muted mb-0 fst-italic" id="profileBio">No bio available.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-5 d-flex justify-content-center gap-3">
+                    <button class="btn btn-outline-dark rounded-pill px-4" onclick="history.back()">
+                        <i class="bi bi-arrow-left me-2"></i>Back
+                    </button>
+                    <!-- Future: Edit Profile Button -->
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const user = JSON.parse(userStr);
+
+        // Basic fill from local storage
+        document.getElementById('profileUsername').innerText = user.username;
+        document.getElementById('profileRole').innerText = user.role || 'Member';
+        document.getElementById('profileInitials').innerText = user.username.charAt(0).toUpperCase();
+
+        try {
+            // Fetch deeper details from API
+            const res = await fetch(`/users/${user.username}`);
+            if (res.ok) {
+                const data = await res.json();
+                const profile = data.profile || {};
+                const email = data.email || 'Hidden'; // API might not return email in this specific endpoint, need to check
+
+                // If the endpoint returns the user object directly or nested
+                // Based on routers/users.py: returns {"username": ..., "info": ..., "profile": ...}
+                // It does NOT seem to return email in `get_user_profile`. 
+                // We might need to rely on localStorage for email if the API doesn't allow it public.
+                // Or update the API. For now, let's use what we have.
+
+                if (profile.bio) {
+                    document.getElementById('profileBio').innerText = profile.bio;
+                    document.getElementById('profileBio').classList.remove('text-muted');
+                    document.getElementById('profileBio').classList.add('text-dark');
+                }
+
+                if (profile.website) {
+                    const webLink = document.getElementById('profileWebsite');
+                    webLink.href = profile.website;
+                    webLink.classList.remove('d-none');
+                    document.getElementById('noWebsite').classList.add('d-none');
+                }
+            }
+
+            // Just use a placeholder or local info for email if available? 
+            // The login response didn't include email in `routers/users.py`.
+            // Let's hide email or show generic for now if not in data.
+            document.getElementById('profileEmail').innerText = "Protected";
+
+        } catch (e) {
+            console.error(e);
+        }
+    });
+</script>
+{% endblock %}
