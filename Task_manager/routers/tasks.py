@@ -28,9 +28,9 @@ async def get_all_tasks(db: Session = Depends(database.get_db)):
 @router.post("/")
 async def create_new_task(task: TaskCreate, db: Session = Depends(database.get_db)):
     # Check if user exists
-    user = db.query(models.User).filter(models.User.id == task.assign_user).first()
-    if not user:
-        raise HTTPException(status_code=404, detail=f"Assigned User ID {task.assign_user} not found")
+    #user = db.query(models.User).filter(models.User.id == task.assign_user).first()
+    #if not user:
+     #   raise HTTPException(status_code=404, detail=f"Assigned User ID {task.assign_user} not found")
     
     # Create Task
     new_task = models.Task(
